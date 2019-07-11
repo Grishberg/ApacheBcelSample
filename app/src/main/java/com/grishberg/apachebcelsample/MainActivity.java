@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -11,6 +12,10 @@ import android.widget.Toast;
 
 import com.github.grishberg.consoleview.Logger;
 import com.github.grishberg.consoleview.LoggerImpl;
+import com.grishberg.apachebcelsample.files.FileWalker;
+
+import java.io.File;
+import java.util.List;
 
 public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -58,12 +63,34 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * @return True if the external storage is available. False otherwise.
+     */
+    public static boolean isAvailable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    public static String getSdCardPath() {
+        return Environment.getExternalStorageDirectory().getPath() + "/";
+    }
+
     private void doWork() {
+        FileWalker fileWalker = new FileWalker();
+        String rootDirName = getSdCardPath() + "Download/classes/barcodescanner";
+
+        File rootFolder = new File(rootDirName);
+        fileWalker.walk(rootFolder);
+        List<File> files = fileWalker.getFiles();
+
         Parser parser = new Parser(logger);
-        String classFileName = "Test.class";
+        String classFileName = getSdCardPath() + "Download/classes/barcodescanner/main/MainScreenService.class";
 
         try {
-            parser.parse(classFileName);
+            parser.parse(new File(classFileName), files);
         } catch (ParseErrorException e) {
             logger.d(TAG, e.getMessage());
         }

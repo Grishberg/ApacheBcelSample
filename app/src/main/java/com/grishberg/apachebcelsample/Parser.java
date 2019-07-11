@@ -13,12 +13,15 @@ import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.InvokeInstruction;
 import org.apache.bcel.generic.MethodGen;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 public class Parser {
     private static final String TAG = Parser.class.getSimpleName();
     private static final String CONSTRUCTOR = "<init>";
     private ClassGen cgen;
+    private ConstantPoolGen pgen;
     private CustomVisitor visitor = new CustomVisitor();
     private final Logger logger;
 
@@ -26,12 +29,13 @@ public class Parser {
         logger = l;
     }
 
-    public void parse(String fileName) throws ParseErrorException {
-        ClassParser classParser = new ClassParser(fileName);
-
+    public void parse(File file, List<File> fileList) throws ParseErrorException {
+        ClassParser classParser = new ClassParser(file.getAbsolutePath());
         JavaClass parsedClass;
         try {
             parsedClass = classParser.parse();
+            cgen = new ClassGen(parsedClass);
+            pgen = cgen.getConstantPool();
             analyzeClass(parsedClass);
         } catch (IOException e) {
             throw new ParseErrorException(e);
@@ -40,7 +44,7 @@ public class Parser {
 
     private void analyzeClass(JavaClass parsedClass) {
         // set up the construction tools
-        ConstantPoolGen pgen = cgen.getConstantPool();
+
         String cname = cgen.getClassName();
 
         CustomVisitor visitor = new CustomVisitor();
@@ -48,14 +52,14 @@ public class Parser {
         for (Method method : parsedClass.getMethods()) {
 
             //вывод информации о текущем методе
-            System.out.println("method: " + method.getName());
+            logger.d(TAG, "method: " + method.getName());
             if (!CONSTRUCTOR.equals(method.getName())) {
                 // not interesting
+                logger.d(TAG, "\tnot interesting..");
                 continue;
             }
 
             MethodGen wrapgen = new MethodGen(method, cname, pgen);
-            //wrapgen.setInstructionList(ilist);
             InstructionList instructionList = wrapgen.getInstructionList();
             for (InstructionHandle h : instructionList) {
                 h.accept(visitor);
